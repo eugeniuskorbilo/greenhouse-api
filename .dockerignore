@@ -1,0 +1,14 @@
+﻿node_modules
+.git
+.github
+.env
+*.db
+*.db-shm
+*.db-wal
+*.zip
+test-results
+reports
+client
+mobile
+e2e
+*.test.js

@@ -1,0 +1,26 @@
+﻿services:
+  mqtt:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  api:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      DB_PATH: /app/data/telemetry.db
+      MQTT_URL: mqtt://mqtt:1883
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ACCESS_TTL: ${ACCESS_TTL:-15m}
+      REFRESH_TTL_DAYS: ${REFRESH_TTL_DAYS:-7}
+    volumes:
+      - greenhouse_data:/app/data
+    depends_on:
+      - mqtt
+
+volumes:
+  greenhouse_data:

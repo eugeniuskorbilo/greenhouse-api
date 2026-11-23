@@ -1,5 +1,5 @@
 
-name: IoT S7 - Automated Testing
+name: IoT PR8 - CI/CD Pipeline
 
 on:
   push:
@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       - name: Run tests and check coverage
         run: npm run test:coverage
 
@@ -46,3 +49,14 @@ jobs:
           name: stryker-mutation-report
           path: reports/mutation/
           if-no-files-found: ignore
+  build-image:
+    name: Build Docker Image
+    needs: tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build API Docker image
+        run: docker build -t greenhouse-api:ci .

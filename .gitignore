@@ -10,3 +10,4 @@ playwright-report/
 reports/
 coverage/
 *.log
+server.js.pr8-backup

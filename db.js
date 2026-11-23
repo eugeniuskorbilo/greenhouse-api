@@ -1,5 +1,5 @@
-const Database = require('better-sqlite3');
-const db = new Database('telemetry.db');
+﻿const Database = require('better-sqlite3');
+const db = new Database(process.env.DB_PATH || 'telemetry.db');
 db.pragma('journal_mode = WAL');
 db.exec(`
 CREATE TABLE IF NOT EXISTS telemetry (
@@ -12,3 +12,4 @@ CREATE TABLE IF NOT EXISTS telemetry (
 CREATE INDEX IF NOT EXISTS idx_telemetry_lookup ON telemetry(device_id, metric, ts, id);
 `);
 module.exports = db;
+
