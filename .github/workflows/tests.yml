@@ -1,3 +1,10 @@
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
 
 name: IoT PR8 - CI/CD Pipeline
 
@@ -10,6 +17,11 @@ jobs:
   tests:
     name: Unit, Integration, API and Coverage
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24, 26]
 
     timeout-minutes: 10
 
@@ -24,7 +36,7 @@ jobs:
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ matrix.node }}
           cache: npm
 
       - name: Install dependencies
@@ -60,3 +72,27 @@ jobs:
 
       - name: Build API Docker image
         run: docker build -t greenhouse-api:ci .
+
+  publish-ghcr:
+    name: Publish Docker image to GHCR
+    needs: [tests, build-image]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/eugeniuskorbilo/greenhouse-api:latest
