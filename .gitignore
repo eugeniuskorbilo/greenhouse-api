@@ -1,0 +1,12 @@
+node_modules/
+client/node_modules/
+.env
+.env.*
+!.env.example
+telemetry.db
+telemetry.db-*
+test-results/
+playwright-report/
+reports/
+coverage/
+*.log
