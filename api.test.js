@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs');
 
 const SECRET = 'pr7-api-testing-secret-at-least-32-characters';
 
-test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
+test('РџР 7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
   const db = new Database(':memory:');
 
   db.exec(`
@@ -69,6 +69,8 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     exports: db
   };
 
+  globalThis.greenhouseMqttClient = { connected: true };
+  
   let app;
 
   try {
@@ -161,18 +163,18 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     const r = await request('/api/v1/health', { token: null });
 
     assert.equal(r.status, 200);
-    assert.deepEqual(r.data, { ok: true });
+    assert.equal(r.data.sqlite, 'up'); assert.equal(r.data.mqtt, 'up');
   });
 
   // 2. JWT
-  await t.test('Без токена: 401', async () => {
+  await t.test('Р‘РµР· С‚РѕРєРµРЅР°: 401', async () => {
     const r = await request('/api/v1/devices', { token: null });
 
     assert.equal(r.status, 401);
     assert.equal(r.data.error, 'missing_token');
   });
 
-  await t.test('Некоректний токен: 401', async () => {
+  await t.test('РќРµРєРѕСЂРµРєС‚РЅРёР№ С‚РѕРєРµРЅ: 401', async () => {
     const r = await request('/api/v1/devices', {
       token: 'invalid.jwt.token'
     });
@@ -181,7 +183,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.data.error, 'invalid_token');
   });
 
-  await t.test('Прострочений токен: 401', async () => {
+  await t.test('РџСЂРѕСЃС‚СЂРѕС‡РµРЅРёР№ С‚РѕРєРµРЅ: 401', async () => {
     const expired = jwt.sign(
       { sub: '1', role: 'agronomist' },
       SECRET,
@@ -197,7 +199,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
   });
 
   // 3. Login
-  await t.test('Login: некоректне тіло запиту', async () => {
+  await t.test('Login: РЅРµРєРѕСЂРµРєС‚РЅРµ С‚С–Р»Рѕ Р·Р°РїРёС‚Сѓ', async () => {
     const r = await request('/api/v1/auth/login', {
       token: null,
       method: 'POST',
@@ -208,7 +210,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.data.error, 'invalid_request');
   });
 
-  await t.test('Login: правильні облікові дані', async () => {
+  await t.test('Login: РїСЂР°РІРёР»СЊРЅС– РѕР±Р»С–РєРѕРІС– РґР°РЅС–', async () => {
     const r = await request('/api/v1/auth/login', {
       token: null,
       method: 'POST',
@@ -224,7 +226,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.data.role, 'agronomist');
   });
 
-  await t.test('Refresh: відсутній токен', async () => {
+  await t.test('Refresh: РІС–РґСЃСѓС‚РЅС–Р№ С‚РѕРєРµРЅ', async () => {
     const r = await request('/api/v1/auth/refresh', {
       token: null,
       method: 'POST',
@@ -235,7 +237,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.data.error, 'invalid_request');
   });
 
-  await t.test('Refresh: невідомий токен', async () => {
+  await t.test('Refresh: РЅРµРІС–РґРѕРјРёР№ С‚РѕРєРµРЅ', async () => {
     const r = await request('/api/v1/auth/refresh', {
       token: null,
       method: 'POST',
@@ -247,7 +249,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
   });
 
   // 4. Devices
-  await t.test('Devices: список без зайвих полів', async () => {
+  await t.test('Devices: СЃРїРёСЃРѕРє Р±РµР· Р·Р°Р№РІРёС… РїРѕР»С–РІ', async () => {
     const r = await request('/api/v1/devices');
 
     assert.equal(r.status, 200);
@@ -258,7 +260,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
   });
 
   // 5. Telemetry validation
-  await t.test('Telemetry: правильний запит', async () => {
+  await t.test('Telemetry: РїСЂР°РІРёР»СЊРЅРёР№ Р·Р°РїРёС‚', async () => {
     const r = await request(telemetry);
 
     assert.equal(r.status, 200);
@@ -269,7 +271,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     );
   });
 
-  await t.test('Telemetry: немає device', async () => {
+  await t.test('Telemetry: РЅРµРјР°С” device', async () => {
     const r = await request(
       '/api/v1/telemetry?metric=soil_moisture'
     );
@@ -277,7 +279,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.status, 400);
   });
 
-  await t.test('Telemetry: немає metric', async () => {
+  await t.test('Telemetry: РЅРµРјР°С” metric', async () => {
     const r = await request(
       '/api/v1/telemetry?device=bed-1'
     );
@@ -285,7 +287,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.status, 400);
   });
 
-  await t.test('Telemetry: невідома метрика', async () => {
+  await t.test('Telemetry: РЅРµРІС–РґРѕРјР° РјРµС‚СЂРёРєР°', async () => {
     const r = await request(
       '/api/v1/telemetry?device=bed-1&metric=pressure'
     );
@@ -293,7 +295,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.status, 400);
   });
 
-  await t.test('Telemetry: невідомий пристрій', async () => {
+  await t.test('Telemetry: РЅРµРІС–РґРѕРјРёР№ РїСЂРёСЃС‚СЂС–Р№', async () => {
     const r = await request(
       '/api/v1/telemetry?device=missing&metric=soil_moisture'
     );
@@ -301,19 +303,19 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.status, 404);
   });
 
-  await t.test('Telemetry: нечисловий from', async () => {
+  await t.test('Telemetry: РЅРµС‡РёСЃР»РѕРІРёР№ from', async () => {
     const r = await request(telemetry + '&from=abc');
 
     assert.equal(r.status, 400);
   });
 
-  await t.test('Telemetry: від’ємний from', async () => {
+  await t.test('Telemetry: РІС–РґвЂ™С”РјРЅРёР№ from', async () => {
     const r = await request(telemetry + '&from=-1');
 
     assert.equal(r.status, 400);
   });
 
-  await t.test('Telemetry: from більше to', async () => {
+  await t.test('Telemetry: from Р±С–Р»СЊС€Рµ to', async () => {
     const r = await request(
       telemetry + '&from=2000&to=1000'
     );
@@ -321,7 +323,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.status, 400);
   });
 
-  await t.test('Telemetry: фільтр from', async () => {
+  await t.test('Telemetry: С„С–Р»СЊС‚СЂ from', async () => {
     const r = await request(
       telemetry + `&from=${base + 120000}`
     );
@@ -333,7 +335,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     );
   });
 
-  await t.test('Telemetry: фільтр to', async () => {
+  await t.test('Telemetry: С„С–Р»СЊС‚СЂ to', async () => {
     const r = await request(
       telemetry + `&to=${base + 60000}`
     );
@@ -383,7 +385,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.status, 400);
   });
 
-  await t.test('Pagination: неправильний cursor', async () => {
+  await t.test('Pagination: РЅРµРїСЂР°РІРёР»СЊРЅРёР№ cursor', async () => {
     const r = await request(
       telemetry + '&cursor=invalid'
     );
@@ -392,7 +394,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
   });
 
   // 7. Aggregation
-  await t.test('Aggregation: avg за годину', async () => {
+  await t.test('Aggregation: avg Р·Р° РіРѕРґРёРЅСѓ', async () => {
     const r = await request(
       telemetry + '&agg=avg&interval=1h'
     );
@@ -409,7 +411,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(totalCount, 4);
   });
 
-  await t.test('Aggregation: невідомий тип', async () => {
+  await t.test('Aggregation: РЅРµРІС–РґРѕРјРёР№ С‚РёРї', async () => {
     const r = await request(
       telemetry + '&agg=sum&interval=1h'
     );
@@ -417,7 +419,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.status, 400);
   });
 
-  await t.test('Aggregation: несумісність із limit', async () => {
+  await t.test('Aggregation: РЅРµСЃСѓРјС–СЃРЅС–СЃС‚СЊ С–Р· limit', async () => {
     const r = await request(
       telemetry + '&agg=avg&interval=1h&limit=2'
     );
@@ -426,7 +428,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
   });
 
   // 8. Alerts
-  await t.test('Alerts: період низької вологості', async () => {
+  await t.test('Alerts: РїРµСЂС–РѕРґ РЅРёР·СЊРєРѕС— РІРѕР»РѕРіРѕСЃС‚С–', async () => {
     const r = await request(alerts + '&threshold=40');
 
     assert.equal(r.status, 200);
@@ -435,7 +437,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.data.periods[0].duration_min, 2);
   });
 
-  await t.test('Alerts: неправильна метрика', async () => {
+  await t.test('Alerts: РЅРµРїСЂР°РІРёР»СЊРЅР° РјРµС‚СЂРёРєР°', async () => {
     const r = await request(
       '/api/v1/alerts?device=bed-1&metric=temperature&threshold=40'
     );
@@ -443,20 +445,20 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.status, 400);
   });
 
-  await t.test('Alerts: threshold понад 100', async () => {
+  await t.test('Alerts: threshold РїРѕРЅР°Рґ 100', async () => {
     const r = await request(alerts + '&threshold=101');
 
     assert.equal(r.status, 400);
   });
 
-  await t.test('Alerts: threshold відсутній', async () => {
+  await t.test('Alerts: threshold РІС–РґСЃСѓС‚РЅС–Р№', async () => {
     const r = await request(alerts);
 
     assert.equal(r.status, 400);
   });
 
   // 9. Thresholds
-  await t.test('Threshold: viewer не має права запису', async () => {
+  await t.test('Threshold: viewer РЅРµ РјР°С” РїСЂР°РІР° Р·Р°РїРёСЃСѓ', async () => {
     const r = await request('/api/v1/devices/bed-1/threshold', {
       token: viewerToken,
       method: 'PUT',
@@ -470,7 +472,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.data.error, 'forbidden');
   });
 
-  await t.test('Threshold: некоректне значення', async () => {
+  await t.test('Threshold: РЅРµРєРѕСЂРµРєС‚РЅРµ Р·РЅР°С‡РµРЅРЅСЏ', async () => {
     const r = await request('/api/v1/devices/bed-1/threshold', {
       method: 'PUT',
       body: {
@@ -482,7 +484,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.status, 400);
   });
 
-  await t.test('Threshold: некоректний device', async () => {
+  await t.test('Threshold: РЅРµРєРѕСЂРµРєС‚РЅРёР№ device', async () => {
     const r = await request('/api/v1/devices/bad!id/threshold', {
       method: 'PUT',
       body: {
@@ -494,7 +496,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.status, 400);
   });
 
-  await t.test('Threshold: створення', async () => {
+  await t.test('Threshold: СЃС‚РІРѕСЂРµРЅРЅСЏ', async () => {
     const r = await request('/api/v1/devices/bed-1/threshold', {
       method: 'PUT',
       body: {
@@ -507,7 +509,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.data.value, 40);
   });
 
-  await t.test('Threshold: читання', async () => {
+  await t.test('Threshold: С‡РёС‚Р°РЅРЅСЏ', async () => {
     const r = await request('/api/v1/devices/bed-1/threshold');
 
     assert.equal(r.status, 200);
@@ -515,7 +517,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.data[0].value, 40);
   });
 
-  await t.test('Threshold: оновлення', async () => {
+  await t.test('Threshold: РѕРЅРѕРІР»РµРЅРЅСЏ', async () => {
     const r = await request('/api/v1/devices/bed-1/threshold', {
       method: 'PUT',
       body: {
@@ -529,7 +531,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
   });
 
   // 10. Audit
-  await t.test('Audit: viewer отримує 403', async () => {
+  await t.test('Audit: viewer РѕС‚СЂРёРјСѓС” 403', async () => {
     const r = await request('/api/v1/audit', {
       token: viewerToken
     });
@@ -537,7 +539,7 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
     assert.equal(r.status, 403);
   });
 
-  await t.test('Audit: agronomist бачить журнал', async () => {
+  await t.test('Audit: agronomist Р±Р°С‡РёС‚СЊ Р¶СѓСЂРЅР°Р»', async () => {
     const r = await request('/api/v1/audit');
 
     assert.equal(r.status, 200);
@@ -549,11 +551,11 @@ test('ПР7: REST API, JWT, thresholds, audit', { timeout: 15000 }, async t => {
   });
 
   // 11. Unknown route
-  await t.test('Невідомий маршрут: 404', async () => {
+  await t.test('РќРµРІС–РґРѕРјРёР№ РјР°СЂС€СЂСѓС‚: 404', async () => {
     const r = await request('/api/v1/unknown-route');
 
     assert.equal(r.status, 404);
   });
 
-  console.log('ПР7: REST API тестування завершено');
+  console.log('РџР 7: REST API С‚РµСЃС‚СѓРІР°РЅРЅСЏ Р·Р°РІРµСЂС€РµРЅРѕ');
 });
