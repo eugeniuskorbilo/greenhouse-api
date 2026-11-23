@@ -1,0 +1,48 @@
+
+name: IoT S7 - Automated Testing
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Unit, Integration, API and Coverage
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 10
+
+    env:
+      NODE_ENV: test
+      JWT_SECRET: github-actions-test-secret-at-least-32-characters
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests and check coverage
+        run: npm run test:coverage
+
+      - name: Run property-based tests
+        run: node --test property.test.js
+
+      - name: Run mutation testing
+        run: npx stryker run
+
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stryker-mutation-report
+          path: reports/mutation/
+          if-no-files-found: ignore
