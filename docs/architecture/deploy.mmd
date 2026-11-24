@@ -1,0 +1,5 @@
+flowchart LR
+  W[Vite :5173] -->|HTTP / Socket.IO| A[api :4000]
+  M[mqtt :1883] -->|MQTT| A
+  A -->|SQLite| V[(greenhouse_data)]
+  G[GHCR latest] -.->|production image| A

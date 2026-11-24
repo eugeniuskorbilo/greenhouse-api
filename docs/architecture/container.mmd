@@ -1,0 +1,18 @@
+C4Container
+title Контейнери Greenhouse API
+Person(user, "Агроном / переглядач", "Користувач")
+System_Ext(sensor, "MQTT-публікатор", "Телеметрія")
+System_Ext(broker, "Mosquitto", "MQTT :1883")
+Container_Boundary(sys, "Greenhouse API") {
+  Container(web, "Вебдашборд", "React / Vite", "Порт 5173")
+  Container(mobile, "Мобільний клієнт", "Flutter", "ПР5; JWT не інтегровано")
+  Container(api, "Backend API + Socket.IO", "Node.js / Express", "Один процес, порт 4000")
+  ContainerDb(db, "SQLite", "SQL / WAL", "Телеметрія та безпека")
+}
+Rel(user, web, "Користується", "HTTP")
+Rel(user, mobile, "Користувався у ПР5", "UI")
+Rel(web, api, "Запити й події", "REST / Socket.IO + JWT")
+Rel(mobile, api, "Інтерфейс до ПР6", "REST / Socket.IO")
+Rel(sensor, broker, "Публікує", "MQTT")
+Rel(broker, api, "Передає", "MQTT / QoS 1")
+Rel(api, db, "Читає і записує", "SQL")

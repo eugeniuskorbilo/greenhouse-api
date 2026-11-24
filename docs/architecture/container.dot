@@ -1,0 +1,12 @@
+digraph G { rankdir=TB; graph [bgcolor="white", pad="0.22", nodesep="0.38", ranksep="0.45", fontname="DejaVu Sans", fontsize=15]; node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11, color="#456776", fillcolor="#eaf3f1", margin="0.16,0.11"]; edge [fontname="DejaVu Sans", fontsize=10, color="#48636f", fontcolor="#334e5c", arrowsize=.7];
+u [label="Агроном / переглядач\n[Person]",fillcolor="#dce9fb"];
+subgraph cluster_system { label="Greenhouse API — межа системи"; color="#789b91"; style="rounded,dashed"; fontname="DejaVu Sans";
+web [label="Вебдашборд\n[React / Vite]\n:5173",fillcolor="#dbece5"];
+mobile [label="Мобільний клієнт\n[Flutter]\nПР5; JWT не інтегровано",fillcolor="#fff0d8"];
+api [label="Backend API + Socket.IO\n[Node.js / Express]\n:4000; один процес",fillcolor="#cde8d9"];
+db [shape=cylinder,label="SQLite\ntelemetry, users, thresholds,\nrefresh_tokens, audit_log"];
+{rank=same;web;mobile;} web -> api [label="REST / JSON\nSocket.IO + JWT"]; mobile -> api [style=dashed,label="REST / Socket.IO\nдо ПР6"]; api -> db [label="SQL"];
+}
+sensor [label="Публікатор\n[MQTT]",fillcolor="#f3f0e8"]; mqtt [label="Mosquitto\n[MQTT broker] :1883",fillcolor="#f3f0e8"];
+u -> web [label="HTTP"]; u -> mobile [style=dashed,label="UI ПР5"]; sensor -> mqtt [label="MQTT"]; mqtt -> api [label="MQTT / QoS 1"]; {rank=same;api;mqtt;}
+}

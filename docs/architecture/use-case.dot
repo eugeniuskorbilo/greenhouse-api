@@ -1,0 +1,6 @@
+digraph G { rankdir=LR; graph [bgcolor="white", pad="0.22", nodesep="0.38", ranksep="0.45", fontname="DejaVu Sans", fontsize=15]; node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11, color="#456776", fillcolor="#eaf3f1", margin="0.16,0.11"]; edge [fontname="DejaVu Sans", fontsize=10, color="#48636f", fontcolor="#334e5c", arrowsize=.7];
+agro [label="Агроном",fillcolor="#dce9fb"]; viewer [label="Переглядач",fillcolor="#dce9fb"]; admin [label="Адміністратор\n(ПР1)",fillcolor="#fff0d8"];
+subgraph cluster_use {label="Сценарії ПР1 та фактичний стан";fontname="DejaVu Sans";style="rounded,dashed";color="#789b91";
+read [shape=ellipse,label="Перегляд показників"]; threshold [shape=ellipse,label="Зміна порогу вологості"]; history [shape=ellipse,label="Історія поливів\nчастково: телеметрія / alerts",fillcolor="#fff0d8"]; accounts [shape=ellipse,label="Керування користувачами\nне реалізовано",fillcolor="#f2e6e6"];
+} agro -> read; agro -> threshold; agro -> history [style=dashed]; viewer -> read; viewer -> history [style=dashed]; admin -> accounts [style=dashed];
+}

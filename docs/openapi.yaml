@@ -1,0 +1,610 @@
+openapi: 3.0.3
+info:
+  title: Greenhouse API
+  version: 1.0.0
+  description: REST API навчальної теплиці за server.js та підключеними routes. Socket.IO та MQTT описано окремо
+    в docs/PROTOCOLS.md.
+servers:
+- url: http://localhost:4000
+  description: Локальне навчальне середовище
+security:
+- bearerAuth: []
+paths:
+  /api/v1/health:
+    get:
+      operationId: getHealth
+      summary: Стан SQLite і MQTT
+      description: Стан SQLite і MQTT
+      security: []
+      responses:
+        '200':
+          description: Успішна відповідь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '503':
+          description: SQLite або MQTT недоступні
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      summary: Вхід користувача
+      description: Вхід користувача
+      security: []
+      responses:
+        '200':
+          description: Успішна відповідь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Некоректні параметри або тіло
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Відсутній або некоректний токен / облікові дані
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Забагато невдалих спроб входу
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+  /api/v1/auth/refresh:
+    post:
+      operationId: refreshSession
+      summary: Ротація refresh-токена
+      description: Ротація refresh-токена
+      security: []
+      responses:
+        '200':
+          description: Успішна відповідь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Некоректні параметри або тіло
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Відсутній або некоректний токен / облікові дані
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Refresh'
+  /api/v1/devices:
+    get:
+      operationId: listDevices
+      summary: Пристрої з наявною телеметрією
+      description: Пристрої з наявною телеметрією
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Успішна відповідь
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        '401':
+          description: Відсутній або некоректний токен / облікові дані
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/telemetry:
+    get:
+      operationId: getTelemetry
+      summary: Історія телеметрії
+      description: from ≤ to. Агрегація несумісна з cursor і limit. Без агрегації повертаються точки та next_cursor;
+        при агрегації — buckets.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Успішна відповідь
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/TelemetryPage'
+                - $ref: '#/components/schemas/Aggregation'
+        '400':
+          description: Некоректні параметри або тіло
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Відсутній або некоректний токен / облікові дані
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Пристрій не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - &id002
+        name: device
+        in: query
+        required: true
+        description: Ідентифікатор грядки
+        schema:
+          type: string
+          minLength: 1
+      - name: metric
+        in: query
+        required: true
+        description: Метрика
+        schema: &id006
+          type: string
+          enum:
+          - temperature
+          - humidity
+          - soil_moisture
+          - light
+      - &id003
+        name: from
+        in: query
+        required: false
+        description: Нижня межа включно, Unix ms
+        schema: &id001
+          type: integer
+          format: int64
+          minimum: 0
+      - &id004
+        name: to
+        in: query
+        required: false
+        description: Верхня межа включно, Unix ms
+        schema: *id001
+      - name: agg
+        in: query
+        required: false
+        description: Лише разом із interval=1h та soil_moisture
+        schema:
+          type: string
+          enum:
+          - avg
+      - name: interval
+        in: query
+        required: false
+        description: Лише з agg=avg
+        schema:
+          type: string
+          enum:
+          - 1h
+      - name: cursor
+        in: query
+        required: false
+        description: Курсор ts:id
+        schema:
+          type: string
+          pattern: ^[0-9]+:[0-9]+$
+      - name: limit
+        in: query
+        required: false
+        description: Розмір сторінки
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 500
+  /api/v1/alerts:
+    get:
+      operationId: getAlerts
+      summary: Періоди низької вологості
+      description: Періоди зі значенням нижче threshold; незавершений період має end і duration_min null. Це не
+        журнал фактичного поливу.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Успішна відповідь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alerts'
+        '400':
+          description: Некоректні параметри або тіло
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Відсутній або некоректний токен / облікові дані
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Пристрій не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - *id002
+      - name: metric
+        in: query
+        required: true
+        description: Тільки вологість ґрунту
+        schema: &id009
+          type: string
+          enum:
+          - soil_moisture
+      - *id003
+      - *id004
+      - name: threshold
+        in: query
+        required: true
+        description: Поріг, %
+        schema: &id010
+          type: number
+          minimum: 0
+          maximum: 100
+  /api/v1/devices/{id}/threshold:
+    get:
+      operationId: getThreshold
+      summary: Читання порогів
+      description: Читання порогів
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Успішна відповідь
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ThresholdRow'
+        '401':
+          description: Відсутній або некоректний токен / облікові дані
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Ідентифікатор грядки
+        schema: &id005
+          type: string
+    put:
+      operationId: setThreshold
+      summary: Зміна порогу агрономом
+      description: Лише agronomist. Запис порогу і аудиту в одній транзакції.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Успішна відповідь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThresholdResult'
+        '400':
+          description: Некоректні параметри або тіло
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Відсутній або некоректний токен / облікові дані
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Недостатньо прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Ідентифікатор грядки
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_-]{1,64}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThresholdWrite'
+  /api/v1/audit:
+    get:
+      operationId: getAudit
+      summary: Останні 100 записів аудиту
+      description: Останні 100 записів аудиту
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Успішна відповідь
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditRow'
+        '401':
+          description: Відсутній або некоректний токен / облікові дані
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Недостатньо прав
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /metrics:
+    get:
+      operationId: getMetrics
+      summary: Кількість Socket.IO-клієнтів
+      description: Кількість Socket.IO-клієнтів
+      security: []
+      responses:
+        '200':
+          description: Лічильник підключених клієнтів
+          content:
+            text/plain:
+              schema: *id005
+              example: 'greenhouse_subscribers 0
+
+                '
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: *id005
+      required:
+      - error
+    Health:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        sqlite:
+          type: string
+          enum:
+          - up
+          - down
+        mqtt:
+          type: string
+          enum:
+          - up
+          - down
+      required:
+      - ok
+      - sqlite
+      - mqtt
+    Login:
+      type: object
+      properties:
+        username: *id005
+        password:
+          type: string
+          format: password
+      required:
+      - username
+      - password
+    Refresh:
+      type: object
+      properties:
+        refreshToken: *id005
+      required:
+      - refreshToken
+    Session:
+      type: object
+      properties:
+        accessToken: *id005
+        refreshToken: *id005
+        tokenType:
+          type: string
+          enum:
+          - Bearer
+        expiresIn: &id008
+          type: integer
+        role:
+          type: string
+          enum:
+          - agronomist
+          - viewer
+        username: *id005
+      required:
+      - accessToken
+      - refreshToken
+      - tokenType
+      - expiresIn
+      - role
+      - username
+    Device:
+      type: object
+      properties:
+        id: *id005
+        name: *id005
+        zone: *id005
+      required:
+      - id
+      - name
+      - zone
+    Point:
+      type: object
+      properties:
+        ts: *id001
+        value: &id007
+          type: number
+      required:
+      - ts
+      - value
+    TelemetryPage:
+      type: object
+      properties:
+        device: *id005
+        metric: *id006
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/Point'
+        next_cursor:
+          type: string
+          nullable: true
+      required:
+      - device
+      - metric
+      - points
+      - next_cursor
+    Bucket:
+      type: object
+      properties:
+        bucket_start: *id001
+        avg: *id007
+        count: *id008
+      required:
+      - bucket_start
+      - avg
+      - count
+    Aggregation:
+      type: object
+      properties:
+        device: *id005
+        metric: *id009
+        interval:
+          type: string
+          enum:
+          - 1h
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bucket'
+      required:
+      - device
+      - metric
+      - interval
+      - buckets
+    Period:
+      type: object
+      properties:
+        start: *id001
+        end:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        duration_min:
+          type: integer
+          nullable: true
+        min_value: *id007
+      required:
+      - start
+      - end
+      - duration_min
+      - min_value
+    Alerts:
+      type: object
+      properties:
+        device: *id005
+        metric: *id009
+        threshold: *id010
+        periods:
+          type: array
+          items:
+            $ref: '#/components/schemas/Period'
+      required:
+      - device
+      - metric
+      - threshold
+      - periods
+    ThresholdWrite:
+      type: object
+      properties:
+        metric: *id009
+        value: *id010
+      required:
+      - metric
+      - value
+    ThresholdResult:
+      type: object
+      properties:
+        device: *id005
+        metric: *id009
+        value: *id010
+      required:
+      - device
+      - metric
+      - value
+    ThresholdRow:
+      type: object
+      properties:
+        metric: *id009
+        value: *id010
+        updated_at: *id005
+      required:
+      - metric
+      - value
+      - updated_at
+    AuditRow:
+      type: object
+      properties:
+        id: *id008
+        user_id: *id008
+        action: *id005
+        target: *id005
+        old_value:
+          type: number
+          nullable: true
+        new_value: *id007
+        ts: *id005
+      required:
+      - id
+      - user_id
+      - action
+      - target
+      - old_value
+      - new_value
+      - ts

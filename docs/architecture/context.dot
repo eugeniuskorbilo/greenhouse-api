@@ -1,0 +1,9 @@
+digraph G { rankdir=TB; graph [bgcolor="white", pad="0.22", nodesep="0.38", ranksep="0.45", fontname="DejaVu Sans", fontsize=15]; node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11, color="#456776", fillcolor="#eaf3f1", margin="0.16,0.11"]; edge [fontname="DejaVu Sans", fontsize=10, color="#48636f", fontcolor="#334e5c", arrowsize=.7];
+agro [label="Агроном\n[Person]\nПоказники, пороги",fillcolor="#dce9fb"];
+view [label="Переглядач\n[Person]\nЧитання показників",fillcolor="#dce9fb"];
+sys [label="Greenhouse API\n[Software System]\nЗбір, історія, візуалізація, доступ",fillcolor="#cde8d9",penwidth=1.7];
+sensor [label="MQTT-публікатор / сенсор\n[External System]",fillcolor="#f3f0e8"];
+broker [label="Mosquitto\n[External System]\nMQTT-брокер",fillcolor="#f3f0e8"];
+{rank=same; agro; view; sensor;} {rank=same; sys; broker;}
+agro -> sys [label="HTTP / Socket.IO"]; view -> sys [label="HTTP / Socket.IO"]; sensor -> broker [label="MQTT"]; broker -> sys [label="MQTT / QoS 1"];
+}

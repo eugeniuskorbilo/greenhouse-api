@@ -1,0 +1,7 @@
+flowchart LR
+  S[Публікатор] -->|MQTT JSON| M[Mosquitto]
+  M --> B[bridge.js]
+  B -->|INSERT| D[(SQLite)]
+  B -->|telemetry:update| W[Socket.IO]
+  W --> R[React]
+  D -.->|REST через API| R

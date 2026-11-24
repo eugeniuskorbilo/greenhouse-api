@@ -1,0 +1,11 @@
+C4Context
+title Контекст Greenhouse API
+Person(agro, "Агроном", "Перегляд і зміна порогів")
+Person(view, "Переглядач", "Читання показників")
+System(sys, "Greenhouse API", "Моніторинг теплиці")
+System_Ext(sensor, "MQTT-публікатор / сенсор", "Джерело телеметрії")
+System_Ext(broker, "Mosquitto", "MQTT-брокер")
+Rel(agro, sys, "Користується", "HTTP / Socket.IO")
+Rel(view, sys, "Користується", "HTTP / Socket.IO")
+Rel(sensor, broker, "Публікує", "MQTT")
+Rel(broker, sys, "Передає телеметрію", "MQTT / QoS 1")
